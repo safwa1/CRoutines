@@ -96,19 +96,18 @@ public static partial class Prelude
     public static void log(object? msg)
         => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {msg}");
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TimeSpan millis(this int ms)
-        => TimeSpan.FromMilliseconds(ms);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TimeSpan seconds(this int s)
-        => TimeSpan.FromSeconds(s);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TimeSpan minutes(this int m)
-        => TimeSpan.FromMinutes(m);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TimeSpan hours(this int h)
-        => TimeSpan.FromHours(h);
+    extension(int time)
+    {
+        public TimeSpan millis
+            => TimeSpan.FromMilliseconds(time);
+        
+        public TimeSpan second
+            => TimeSpan.FromSeconds(time);
+        
+        public TimeSpan minute
+            => TimeSpan.FromMinutes(time);
+        
+        public TimeSpan hour
+            => TimeSpan.FromHours(time);
+    }
 }

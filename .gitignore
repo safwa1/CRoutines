@@ -1,3 +1,6 @@
 .idea
 CRoutines/obj
 CRoutines/bin
+
+/CRoutines.Test/bin/
+/CRoutines.Test/obj/
