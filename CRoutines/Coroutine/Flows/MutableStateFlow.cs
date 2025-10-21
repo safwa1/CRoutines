@@ -4,7 +4,7 @@ public sealed class MutableStateFlow<T> : ISharedFlow<T>
 {
     private readonly MutableSharedFlow<T> _flow = new();
     private T _value;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public T Value
     {
