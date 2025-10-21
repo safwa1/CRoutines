@@ -195,13 +195,13 @@ d.Dispose();
 - Select.From(params Func<CancellationToken, Task<T>>[] choices): returns the first completed result and cancels the rest
 
 ```csharp
-var data = await Retry.Execute(async () => await FetchAsync(), 3, TimeSpan.FromMilliseconds(200));
+var data = await Retry.Execute(async () => await FetchAsync(), 3, 200.Millis);
 
 var fastest = await Select.From(
     async ct => await DownloadMirrorA(ct),
     async ct => await DownloadMirrorB(ct));
 
-var value = await Timeout.WithTimeout(TimeSpan.FromSeconds(2), async () => await ComputeAsync());
+var value = await Timeout.WithTimeout(2.Second, async () => await ComputeAsync());
 ```
 
 ## Managed tasks
@@ -255,6 +255,7 @@ Learn by example (full chain):
 
 ```csharp
 using CRoutines.ManagedTasks;
+using CRoutines.Coroutine.Extensions;
 
 var download = FlowTask.NewTask("Download", async (ct, wait) =>
 {
@@ -268,7 +269,7 @@ var download = FlowTask.NewTask("Download", async (ct, wait) =>
 })
 .Managed()
 .WithPriority(TaskPriority.High)
-.Schedule(TimeSpan.FromSeconds(5));   // start 5s later
+.Schedule(5.Second);   // start 5s later
 
 var process = FlowTask.NewTask("Process", async (ct, wait) =>
 {
@@ -318,7 +319,7 @@ var poller = FlowTask.NewTask("PollServer", async (ct, wait) =>
     Console.WriteLine("Polled!");
 })
 .Managed()
-.Schedule(TimeSpan.FromSeconds(10), repeat: true);
+.Schedule(10.Second, repeat: true);
 
 // Later: FlowTaskManager.Shared.CancelAsync("PollServer");
 ```
@@ -502,6 +503,7 @@ await Coroutines.RunBlocking(async scope =>
 ```csharp
 using CRoutines.Coroutine;
 using CRoutines.Coroutine.Utilities;
+using CRoutines.Coroutine.Extensions;
 
 await Coroutines.RunBlocking(async scope =>
 {
@@ -528,7 +530,7 @@ await Coroutines.RunBlocking(async scope =>
     {
         await Delay.For(5000, ctx.CancellationToken);
     });
-    var completed = await longJob.Join(TimeSpan.FromSeconds(1));
+    var completed = await longJob.Join(1.Second);
     Console.WriteLine(completed ? "Completed in time" : "Timeout");
     longJob.Cancel();
 });
@@ -550,7 +552,7 @@ await Coroutines.RunBlocking(async scope =>
     for (int i = 0; i < 5; i++)
         scope.Launch(async ctx => await Delay.For(200 + i * 150, ctx.CancellationToken));
 
-    var allInTime = await scope.JoinAll(TimeSpan.FromSeconds(2));
+    var allInTime = await scope.JoinAll(1.Second);
     if (!allInTime) scope.Cancel();
 });
 ```
@@ -693,10 +695,11 @@ sub.Dispose();
 
 ```csharp
 using CRoutines.Coroutine.Utilities;
+using CRoutines.Coroutine.Extensions;
 
 try
 {
-    var value = await Timeout.WithTimeout(TimeSpan.FromSeconds(1), async () =>
+    var value = await Timeout.WithTimeout(1.Second, async () =>
     {
         await Task.Delay(1500);
         return 123;
@@ -711,7 +714,7 @@ var result = await Retry.Execute(async () =>
 {
     // throw until it succeeds
     return "Success";
-}, maxAttempts: 5, delayBetweenAttempts: TimeSpan.FromMilliseconds(200));
+}, maxAttempts: 5, delayBetweenAttempts: 200.Millis);
 
 var first = await Select.From(
     async ct => { await Task.Delay(1000, ct); return "Slow"; },
@@ -787,6 +790,7 @@ API client with Retry + Timeout:
 
 ```csharp
 using CRoutines.Coroutine.Utilities;
+using CRoutines.Coroutine.Extensions;
 
 public sealed class ApiClient
 {
@@ -794,12 +798,12 @@ public sealed class ApiClient
     {
         return await Retry.Execute(async () =>
         {
-            return await Timeout.WithTimeout(TimeSpan.FromSeconds(5), async () =>
+            return await Timeout.WithTimeout(5.Second, async () =>
             {
                 await Task.Delay(500); // simulate
                 return $"Data from {endpoint}";
             });
-        }, maxAttempts: 3, delayBetweenAttempts: TimeSpan.FromMilliseconds(500));
+        }, maxAttempts: 3, delayBetweenAttempts: 500.Millis);
     }
 }
 ```

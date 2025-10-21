@@ -4,13 +4,13 @@ public static class TimeSpanExtensions
 {
     extension(int val)
     {
-        public TimeSpan Seconds => TimeSpan.FromSeconds(val);
+        public TimeSpan Second => TimeSpan.FromSeconds(val);
         
-        public TimeSpan Minutes => TimeSpan.FromMinutes(val);
+        public TimeSpan Minute => TimeSpan.FromMinutes(val);
         
-        public TimeSpan Hours => TimeSpan.FromHours(val);
+        public TimeSpan Hour => TimeSpan.FromHours(val);
         
-        public TimeSpan Days => TimeSpan.FromDays(val);
+        public TimeSpan Day => TimeSpan.FromDays(val);
         
         public TimeSpan Millis => TimeSpan.FromMilliseconds(val);
         
