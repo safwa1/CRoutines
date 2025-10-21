@@ -31,6 +31,9 @@ public static class Flow
     public static async IAsyncEnumerable<T> Of<T>(params T[] items)
     {
         foreach (var item in items)
+        {
+            await Task.Yield();
             yield return item;
+        }
     }
 }
