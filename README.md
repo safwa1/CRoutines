@@ -27,14 +27,14 @@ await Coroutines.RunBlocking(async scope =>
     // Fire-and-forget
     var job = scope.Launch(async ctx =>
     {
-        await Task.Delay(200);
+        await Delay.For(200.Millis);
         Console.WriteLine($"Hello from {ctx.Dispatcher.GetType().Name}");
     });
 
     // With result (Deferred<T>)
     var deferred = scope.Async(async ctx =>
     {
-        await Task.Delay(100);
+        await Delay.For(100.Millis);
         return 42;
     });
 
