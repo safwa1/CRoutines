@@ -5,6 +5,30 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>preview</LangVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageId>CRoutines</PackageId>
+        <Version>0.1.0</Version>
+        <ReleaseVersion>0.1.0</ReleaseVersion>
+        <Authors>Safwan Abdulghani</Authors>
+        <Company>Safwan.pro</Company>
+        <Description>
+            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
+        </Description>
+        <PackageDescription>
+            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
+        </PackageDescription>
+        <PackageTags>async;coroutines;concurrency;structured-concurrency;C#-DSL</PackageTags>
+        <PackageProjectUrl>https://github.com/safwa1/CRoutines</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/safwa1/CRoutines</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>
