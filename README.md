@@ -1,5 +1,13 @@
 # CRoutines
 
+<div align="center">
+
+[![NuGet](https://img.shields.io/nuget/v/CRoutines.svg)](https://www.nuget.org/packages/CRoutines/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://img.shields.io/nuget/dt/CRoutines.svg)](https://www.nuget.org/packages/CRoutines/)
+
+</div>
+
 A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
 
 - Structured concurrency with Job tree and CoroutineScope
