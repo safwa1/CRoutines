@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CRoutines.Coroutine.Dispatchers;
 
 namespace CRoutines;
@@ -10,5 +11,17 @@ public static partial class Prelude
         public static ICoroutineDispatcher IO => IODispatcher.Instance;
         public static ICoroutineDispatcher Main(string name = "CoroutineThread") => new SingleThreadDispatcher(name);
         public static ICoroutineDispatcher Unconfined => UnconfinedDispatcher.Instance;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher WinForms(System.ComponentModel.ISynchronizeInvoke control)
+            => new WinFormsDispatcher(control);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher WinUI(object dispatcherQueue)
+            => new WinUIDispatcher(dispatcherQueue);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher Wpf(object dispatcher)
+            => new WpfDispatcher(dispatcher);
     }
 }

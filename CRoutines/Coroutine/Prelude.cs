@@ -24,17 +24,56 @@ public static partial class Prelude
         ICoroutineDispatcher? dispatcher = null,
         Job? parentJob = null)
         => new(dispatcher, parentJob);
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CoroutineLocal<T> coroutineLocalOf<T>() => CoroutineLocalOf<T>();
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CoroutineContext coroutineContextOf(Job job, ICoroutineDispatcher dispatcher) => CoroutineContextOf(job, dispatcher);
+    public static CoroutineContext coroutineContextOf(Job job, ICoroutineDispatcher dispatcher) =>
+        CoroutineContextOf(job, dispatcher);
 
     public static CoroutineScope coroutineScope => CoroutineScope;
+
+    public static Func<Func<CoroutineContext, Task>, ICoroutineDispatcher?, CoroutineStart, Job> launch
+        => coroutineScope.Launch;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Job launchOn(
+        ICoroutineDispatcher dispatcher,
+        Func<CoroutineContext, Task> block,
+        Job? parentJob = null,
+        CoroutineStart start = CoroutineStart.Default
+    )
+    {
+        var scope = coroutineScopeOf(dispatcher, parentJob);
+        return scope.Launch(block, dispatcher, start);
+    }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CoroutineScope coroutineScopeOf(ICoroutineDispatcher? dispatcher = null, Job? parentJob = null) => CoroutineScopeOf(dispatcher, parentJob);
+    public static Task withContext(
+        ICoroutineDispatcher dispatcher,
+        Func<CoroutineContext, Task> block,
+        Job? parentJob = null
+    )
+    {
+        var scope = coroutineScopeOf(dispatcher, parentJob);
+        return scope.WithContext(dispatcher, block);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task withContext(
+        ICoroutineDispatcher dispatcher,
+        CoroutineScope scope,
+        Func<CoroutineContext, Task> block,
+        Job? parentJob = null
+    )
+    {
+        return scope.WithContext(dispatcher, block);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CoroutineScope coroutineScopeOf(ICoroutineDispatcher? dispatcher = null, Job? parentJob = null) =>
+        CoroutineScopeOf(dispatcher, parentJob);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task delay(TimeSpan duration, CancellationToken token = default)
@@ -46,11 +85,11 @@ public static partial class Prelude
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<T> withTimeout<T>(TimeSpan timeout, Func<Task<T>> op)
-        =>  WithTimeout(timeout, op);
+        => WithTimeout(timeout, op);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task withTimeout(TimeSpan timeout, Func<Task> op)
-        =>  WithTimeout(timeout, op);
+        => WithTimeout(timeout, op);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<T> retry<T>(Func<Task<T>> op, int attempts = 3, TimeSpan? delay = null)
@@ -66,19 +105,20 @@ public static partial class Prelude
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MutableStateFlow<T> stateFlowOf<T>(T initial) => new(initial);
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAsyncEnumerable<T> flowOf<T>(
         Func<IFlowCollector<T>, CancellationToken, Task> block,
         CancellationToken ct = default
-    ) => FlowOf(block,ct );
-    
+    ) => FlowOf(block, ct);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAsyncEnumerable<T> flowOf<T>(params T[] items) => FlowOf(items);
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Deferred<T> deferredOf<T>(Task<T> task, Job job, Action? start = null) => DeferredOf<T>(task, job, start);
-    
+    public static Deferred<T> deferredOf<T>(Task<T> task, Job job, Action? start = null) =>
+        DeferredOf<T>(task, job, start);
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CoroutineChannel<T> unboundedChannelOf<T>()
@@ -100,13 +140,13 @@ public static partial class Prelude
     {
         public TimeSpan millis
             => TimeSpan.FromMilliseconds(time);
-        
+
         public TimeSpan second
             => TimeSpan.FromSeconds(time);
-        
+
         public TimeSpan minute
             => TimeSpan.FromMinutes(time);
-        
+
         public TimeSpan hour
             => TimeSpan.FromHours(time);
     }
