@@ -34,8 +34,25 @@ public static partial class Prelude
 
     public static CoroutineScope coroutineScope => CoroutineScope;
 
-    public static Func<Func<CoroutineContext, Task>, ICoroutineDispatcher?, CoroutineStart, Job> launch
-        => coroutineScope.Launch;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Job launch(
+        Func<CoroutineContext,Task> block, 
+        ICoroutineDispatcher? dispatcher = null, 
+        CoroutineStart start = CoroutineStart.Default)
+        => coroutineScope.Launch(block, dispatcher, start);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Job launch(
+        Func<CoroutineContext, CoroutineScope, Task> block,
+        ICoroutineDispatcher? dispatcher = null,
+        CoroutineStart start = CoroutineStart.Default)
+    {
+        // Wrap the block so it matches the Func<CoroutineContext, Task> signature expected by CoroutineScope.Launch
+        return coroutineScope.Launch(async ctx =>
+        {
+            await block(ctx, coroutineScope); // pass the scope to the block
+        }, dispatcher, start);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Job launchOn(
@@ -47,6 +64,19 @@ public static partial class Prelude
     {
         var scope = coroutineScopeOf(dispatcher, parentJob);
         return scope.Launch(block, dispatcher, start);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Job launchOn(
+        ICoroutineDispatcher dispatcher,
+        Func<CoroutineContext, CoroutineScope, Task> block,
+        Job? parentJob = null,
+        CoroutineStart start = CoroutineStart.Default
+    )
+    {
+        var scope = coroutineScopeOf(dispatcher, parentJob);
+        // wrap the block to match Func<CoroutineContext, Task>
+        return scope.Launch(async ctx => await block(ctx, scope), dispatcher, start);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
