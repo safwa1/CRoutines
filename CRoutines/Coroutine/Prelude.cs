@@ -74,9 +74,14 @@ public static partial class Prelude
         CoroutineStart start = CoroutineStart.Default
     )
     {
-        var scope = coroutineScopeOf(dispatcher, parentJob);
+        var scope = CoroutineScopeCache.GetOrCreate(dispatcher, parentJob);
         // wrap the block to match Func<CoroutineContext, Task>
         return scope.Launch(async ctx => await block(ctx, scope), dispatcher, start);
+    }
+    
+    public static void cleanScopes() 
+    {
+        CoroutineScopeCache.ClearAll();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -86,7 +91,7 @@ public static partial class Prelude
         Job? parentJob = null
     )
     {
-        var scope = coroutineScopeOf(dispatcher, parentJob);
+        var scope = CoroutineScopeCache.GetOrCreate(dispatcher, parentJob);
         return scope.WithContext(dispatcher, block);
     }
     
@@ -94,8 +99,28 @@ public static partial class Prelude
     public static Task withContext(
         ICoroutineDispatcher dispatcher,
         CoroutineScope scope,
-        Func<CoroutineContext, Task> block,
+        Func<CoroutineContext, Task> block
+    )
+    {
+        return scope.WithContext(dispatcher, block);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> withContext<T>(
+        ICoroutineDispatcher dispatcher,
+        Func<CoroutineContext, Task<T>> block,
         Job? parentJob = null
+    )
+    {
+        var scope = coroutineScopeOf(dispatcher, parentJob);
+        return scope.WithContext(dispatcher, block);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> withContext<T>(
+        ICoroutineDispatcher dispatcher,
+        CoroutineScope scope,
+        Func<CoroutineContext, Task<T>> block
     )
     {
         return scope.WithContext(dispatcher, block);

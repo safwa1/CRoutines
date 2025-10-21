@@ -13,6 +13,9 @@ public sealed class CoroutineScope : IDisposable
     {
         _dispatcher = dispatcher ?? DefaultDispatcher.Instance;
         _job = parentJob ?? new Job();
+        
+        // Automatically cache this scope
+        CoroutineScopeCache.Add(this);
     }
 
     public Job Job => _job;
@@ -116,6 +119,9 @@ public sealed class CoroutineScope : IDisposable
         {
             try
             {
+                #if DEBUG
+                Console.WriteLine(dispatcher.ToString());
+                #endif
                 var result = await block(new CoroutineContext(child, dispatcher));
                 tcs.TrySetResult(result);
             }
@@ -196,5 +202,8 @@ public sealed class CoroutineScope : IDisposable
         }
     }
 
-    public void Dispose() => Cancel();
+    public void Dispose()
+    {
+        Cancel();
+    }
 }

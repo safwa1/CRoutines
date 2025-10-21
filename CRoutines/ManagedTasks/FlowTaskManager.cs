@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace CRoutines.ManagedTasks;
 
@@ -10,11 +9,13 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
 
     private readonly ConcurrentDictionary<string, FlowTask> _tasks = new();
     public event Action<TaskStateChangedEvent>? TaskChanged;
-    
+
     private bool _autoCleanup = true;
 
-    private FlowTaskManager() { }
-
+    private FlowTaskManager()
+    {
+    }
+    
     public IEnumerable<FlowTask> All => _tasks.Values.OrderByDescending(t => t.Priority);
 
     public bool Add(FlowTask task)
@@ -28,44 +29,40 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
 
     public async Task RunAllAsync()
     {
-        var tasks = All
-            .OrderByDescending(t => t.Priority)
-            .Select(t => t.StartAsync());
-
+        var tasks = All.Select(t => t.StartAsync());
         await Task.WhenAll(tasks);
     }
 
-    public FlowTask? Get(string name) =>
-        _tasks.GetValueOrDefault(name);
+    // Pause/Resume/Cancel without freezing UI
+    public Task PauseAllAsync()
+    {
+        foreach (var t in _tasks.Values) t.Pause();
+        return Task.CompletedTask;
+    }
 
-    public async Task CancelAsync(string name)
+    public Task ResumeAllAsync()
+    {
+        foreach (var t in _tasks.Values) t.Resume();
+        return Task.CompletedTask;
+    }
+
+    public Task CancelAsync(string name)
     {
         if (_tasks.TryGetValue(name, out var t))
-            await Task.Run(() => t.Cancel());
+            t.Cancel();
+        return Task.CompletedTask;
     }
 
-    public async Task PauseAllAsync()
+    public Task CancelAllAsync()
     {
-        await Task.Run(() =>
-        {
-            foreach (var t in _tasks.Values) t.Pause();
-        });
+        foreach (var t in _tasks.Values) t.Cancel();
+        return Task.CompletedTask;
     }
 
-    public async Task ResumeAllAsync()
+    public void Remove(string name)
     {
-        await Task.Run(() =>
-        {
-            foreach (var t in _tasks.Values) t.Resume();
-        });
-    }
-
-    public async Task CancelAllAsync()
-    {
-        await Task.Run(() =>
-        {
-            foreach (var t in _tasks.Values) t.Cancel();
-        });
+        if (_tasks.TryRemove(name, out var t))
+            t.Cancel();
     }
 
     public FlowTaskManager WithAutoCleanup(bool autoCleanup)
@@ -73,42 +70,20 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
         _autoCleanup = autoCleanup;
         return this;
     }
-    
+
     private void CleanupCompleted()
     {
         if (!_autoCleanup) return;
         var completed = _tasks
             .Where(kv => kv.Value.State is TaskState.Completed or TaskState.Canceled or TaskState.Faulted)
-            .Select(kv => kv.Key)
-            .ToList();
-
-        foreach (var name in completed)
-            _tasks.TryRemove(name, out _);
-    }
-    
-    public string SaveToJson()
-    {
-        var snapshots = _tasks.Values.Select(t => t.ToSnapshot()).ToList();
-        return JsonSerializer.Serialize(snapshots, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    public void LoadFromJson(string json)
-    {
-        var snapshots = JsonSerializer.Deserialize<List<TaskSnapshot>>(json) ?? [];
-        foreach (var snap in snapshots)
-        {
-            var dummy = FlowTask.NewTask(snap.Name, async (_, _) => await Task.CompletedTask)
-                .WithPriority(snap.Priority);
-            Add(dummy);
-        }
+            .Select(kv => kv.Key).ToList();
+        foreach (var name in completed) _tasks.TryRemove(name, out _);
     }
     
     public void OnNext(TaskStateChangedEvent evt)
     {
         TaskChanged?.Invoke(evt);
-
-        if (evt.NewState is TaskState.Completed or TaskState.Canceled or TaskState.Faulted)
-            CleanupCompleted();
+        if (evt.NewState is TaskState.Completed or TaskState.Canceled or TaskState.Faulted) CleanupCompleted();
     }
 
     public void OnError(Exception error)
@@ -125,7 +100,8 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
     {
         Console.WriteLine($"\n--- Tasks ---");
         foreach (var t in All)
-            Console.WriteLine($"{t.Name,-20} | {t.State,-10} | {t.Progress,6:0.0}% | {t.Priority,-8} | {(t.Duration?.TotalSeconds ?? 0):0.0}s");
+            Console.WriteLine(
+                $"{t.Name,-20} | {t.State,-10} | {t.Progress,6:0.0}% | {t.Priority,-8} | {(t.Duration?.TotalSeconds ?? 0):0.0}s");
         Console.WriteLine();
     }
 }

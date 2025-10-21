@@ -9,8 +9,8 @@
         <NoWarn>1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageId>CRoutines</PackageId>
-        <Version>0.1.2</Version>
-        <ReleaseVersion>0.1.2</ReleaseVersion>
+        <Version>0.1.3</Version>
+        <ReleaseVersion>0.1.3</ReleaseVersion>
         <Authors>Safwan Abdulghani</Authors>
         <Company>Safwan.pro</Company>
         <Description>
