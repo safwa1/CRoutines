@@ -18,23 +18,22 @@ Add the project to your solution or reference the compiled assembly targeting ne
 ## Quick start
 
 ```csharp
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Contexts;
-using CRoutines.Coroutine.Dispatchers;
+using CRoutines.Coroutine.Extensions;
+using static CRoutines.Prelude;
 
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     // Fire-and-forget
     var job = scope.Launch(async ctx =>
     {
-        await Delay.For(200.Millis);
+        await Delay(200.Millis);
         Console.WriteLine($"Hello from {ctx.Dispatcher.GetType().Name}");
     });
 
     // With result (Deferred<T>)
     var deferred = scope.Async(async ctx =>
     {
-        await Delay.For(100.Millis);
+        await Delay(100.Millis);
         return 42;
     });
 
@@ -94,7 +93,7 @@ CoroutineContext gives you:
 Example: switch context to a UI thread and back
 
 ```csharp
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var ui = new WpfDispatcher(System.Windows.Application.Current.Dispatcher);
 
@@ -123,9 +122,9 @@ CoroutineExceptionHandler.Current = CoroutineExceptionHandler.Logging();
 Simple typed channels built on System.Threading.Channels.
 
 ```csharp
-using CRoutines.Coroutine.Channels;
+using static CRoutines.Prelude;
 
-var chan = CoroutineChannel<int>.CreateBounded(16);
+var chan = BoundedCoroutineChannelOf<int>(16);
 
 // sender
 _ = Task.Run(async () =>
@@ -141,9 +140,9 @@ await foreach (var i in chan.ReceiveAll())
 ```
 
 APIs:
-- CoroutineChannel<T>.CreateUnbounded()
-- CoroutineChannel<T>.CreateBounded(int capacity)
-- CoroutineChannel<T>.CreateRendezvous()
+- CoroutineChannel<T>.CreateUnbounded() OR UnboundedCoroutineChannelOf<T>()
+- CoroutineChannel<T>.CreateBounded(int capacity) OR BoundedCoroutineChannelOf<T>(int capacity)
+- CoroutineChannel<T>.CreateRendezvous() OR RendezvousCoroutineChannelOf<T>()
 - ISendChannel<T>.Send(value)
 - IReceiveChannel<T>.ReceiveAll()
 - Close()
@@ -160,6 +159,7 @@ Cold flows, plus hot shared flows.
 
 ```csharp
 using CRoutines.Coroutine.Flows;
+using static CRoutines.Prelude;
 
 var numbers = Flow.Create<int>(async (collector, ct) =>
 {
@@ -174,13 +174,13 @@ await foreach (var x in numbers.Map(n => n * 2))
     Console.WriteLine(x);
 
 // Shared flow
-var shared = new MutableSharedFlow<string>();
+var shared = MutableSharedFlowOf<string>();
 var sub = shared.Subscribe(async s => Console.WriteLine($"got: {s}"));
 await shared.Emit("hello");
 sub.Dispose();
 
 // State flow
-var state = new MutableStateFlow<int>(0);
+var state = MutableStateFlowOf<int>(0);
 var d = state.Subscribe(async v => Console.WriteLine($"state: {v}"));
 state.Value = 1; // immediately emits
 await state.Update(v => v + 1);
@@ -407,25 +407,25 @@ Below are concise, copy‑pasteable examples adapted to CRoutines to help you ge
 ### 1) Basic: Launch, Async (Deferred<T>), Lazy start
 
 ```csharp
-using CRoutines.Coroutine;
 using CRoutines.Coroutine.Contexts;
-using CRoutines.Coroutine.Utilities;
+using CRoutines.Coroutine.Extensions;
+using static CRoutines.Prelude;
 
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     Console.WriteLine("Starting coroutines...");
 
     // Fire-and-forget
     var job1 = scope.Launch(async ctx =>
     {
-        await Delay.For(1000, ctx.CancellationToken);
+        await Delay(1.Second, ctx.CancellationToken);
         Console.WriteLine("Job 1 completed!");
     });
 
     // With result (Deferred<T>)
     var deferred = scope.Async(async ctx =>
     {
-        await Delay.For(500, ctx.CancellationToken);
+        await Delay(500.Millis, ctx.CancellationToken);
         return 42;
     });
 
@@ -437,12 +437,12 @@ await Coroutines.RunBlocking(async scope =>
     var lazy = scope.Async(async ctx =>
     {
         Console.WriteLine("Starting lazy computation...");
-        await Delay.For(500, ctx.CancellationToken);
+        await Delay(500, ctx.CancellationToken);
         return "Lazy result!";
     }, start: CoroutineStart.Lazy);
 
     Console.WriteLine("Deferred created, not started yet");
-    await Delay.For(200);
+    await Delay(200);
     lazy.Start();
     Console.WriteLine(await lazy.Await());
 
@@ -453,45 +453,44 @@ await Coroutines.RunBlocking(async scope =>
 ### 2) Dispatchers and WithContext
 
 ```csharp
-using CRoutines.Coroutine;
 using CRoutines.Coroutine.Dispatchers;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
 // Default (ThreadPool)
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     scope.Launch(async ctx =>
     {
         Console.WriteLine($"Default thread: {Environment.CurrentManagedThreadId}");
-        await Delay.For(250, ctx.CancellationToken);
+        await Delay(250, ctx.CancellationToken);
     });
 });
 
 // IO dispatcher
-using var ioScope = new CRoutines.Coroutine.Contexts.CoroutineScope(IODispatcher.Instance);
+using var ioScope = CoroutineScopeOf(IODispatcher.Instance);
 var ioJob = ioScope.Launch(async ctx =>
 {
     // Simulate IO
-    await Delay.For(100, ctx.CancellationToken);
+    await Delay(100, ctx.CancellationToken);
 });
 await ioJob.Join();
 
 // Single-threaded dispatcher
 using var single = new SingleThreadDispatcher("MyThread");
-using var singleScope = new CRoutines.Coroutine.Contexts.CoroutineScope(single);
+using var singleScope = CoroutineScopeOf(single);
 singleScope.Launch(async ctx =>
 {
     Console.WriteLine($"Job 1 on thread: {Environment.CurrentManagedThreadId}");
-    await Delay.For(50, ctx.CancellationToken);
+    await Delay(50, ctx.CancellationToken);
 });
 await singleScope.JoinAll();
 
 // WithContext switch
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var value = await scope.WithContext(IODispatcher.Instance, async ctx =>
     {
-        await Delay.For(100, ctx.CancellationToken);
+        await Delay(100, ctx.CancellationToken);
         return "from IO";
     });
     Console.WriteLine(value);
@@ -501,11 +500,10 @@ await Coroutines.RunBlocking(async scope =>
 ### 3) Cancellation, Join/JoinAll, timeouts and tokens
 
 ```csharp
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Utilities;
 using CRoutines.Coroutine.Extensions;
+using static CRoutines.Prelude;
 
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var job = scope.Launch(async ctx =>
     {
@@ -513,22 +511,22 @@ await Coroutines.RunBlocking(async scope =>
         {
             if (ctx.CancellationToken.IsCancellationRequested) return;
             Console.WriteLine($"Working {i}");
-            await Delay.For(200, ctx.CancellationToken);
+            await Delay(200, ctx.CancellationToken);
         }
     });
 
-    await Delay.For(600);
+    await Delay(600);
     job.Cancel();
     Console.WriteLine("Cancellation requested");
     await job.Join();
 });
 
 // Join with timeout
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var longJob = scope.Launch(async ctx =>
     {
-        await Delay.For(5000, ctx.CancellationToken);
+        await Delay(5000, ctx.CancellationToken);
     });
     var completed = await longJob.Join(1.Second);
     Console.WriteLine(completed ? "Completed in time" : "Timeout");
@@ -536,9 +534,9 @@ await Coroutines.RunBlocking(async scope =>
 });
 
 // Join with CancellationToken
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
-    var job = scope.Launch(async ctx => await Delay.For(3000, ctx.CancellationToken));
+    var job = scope.Launch(async ctx => await Delay(3000, ctx.CancellationToken));
     using var cts = new CancellationTokenSource();
     cts.CancelAfter(500);
     try { await job.Join(cts.Token); }
@@ -547,10 +545,10 @@ await Coroutines.RunBlocking(async scope =>
 });
 
 // Efficient JoinAll and timeout
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     for (int i = 0; i < 5; i++)
-        scope.Launch(async ctx => await Delay.For(200 + i * 150, ctx.CancellationToken));
+        scope.Launch(async ctx => await Delay(200 + i * 150, ctx.CancellationToken));
 
     var allInTime = await scope.JoinAll(1.Second);
     if (!allInTime) scope.Cancel();
@@ -561,51 +559,50 @@ Supervision and exceptions:
 
 ```csharp
 using CRoutines.Coroutine.Core;
-using CRoutines.Coroutine;
 using CRoutines.Coroutine.Contexts;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
 CoroutineExceptionHandler.Current = new CoroutineExceptionHandler(ex =>
     Console.WriteLine($"[Global] {ex.Message}"));
 
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var supervisor = new SupervisorJob();
-    var childScope = new CRoutines.Coroutine.Contexts.CoroutineScope(parentJob: supervisor);
+    var childScope = CoroutineScopeOf(parentJob: supervisor);
 
     // Child 1 fails
     childScope.Launch(async ctx =>
     {
-        await Delay.For(200, ctx.CancellationToken);
+        await Delay(200, ctx.CancellationToken);
         throw new InvalidOperationException("boom");
     });
 
     // Child 2 continues
     childScope.Launch(async ctx =>
     {
-        await Delay.For(500, ctx.CancellationToken);
+        await Delay(500, ctx.CancellationToken);
         Console.WriteLine("Child 2 completed");
     });
 
-    await Delay.For(800);
+    await Delay(800);
 });
 
 // Non-cascading async: one Deferred fails, another still succeeds
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     var d1 = scope.Async<string>(async ctx =>
     {
-        await Delay.For(100, ctx.CancellationToken);
+        await Delay(100, ctx.CancellationToken);
         throw new Exception("Deferred 1 failed!");
     });
 
     var d2 = scope.Async(async ctx =>
     {
-        await Delay.For(200, ctx.CancellationToken);
+        await Delay(200, ctx.CancellationToken);
         return "OK";
     });
 
-    await Delay.For(300);
+    await Delay(300);
     Console.WriteLine($"d1 faulted: {d1.IsFaulted}, d2 completed: {d2.IsCompleted}");
     if (d2.TryGetResult(out var ok)) Console.WriteLine(ok);
 });
@@ -614,12 +611,10 @@ await Coroutines.RunBlocking(async scope =>
 ### 4) Channels
 
 ```csharp
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Channels;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
-var channel = CoroutineChannel<int>.CreateBounded(2);
-await Coroutines.RunBlocking(async scope =>
+var channel = BoundedCoroutineChannelOf<int>(2);
+await RunBlocking(async scope =>
 {
     // Producer
     scope.Launch(async ctx =>
@@ -645,14 +640,14 @@ await Coroutines.RunBlocking(async scope =>
 
 ```csharp
 using CRoutines.Coroutine.Flows;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
 var numbers = Flow.Create<int>(async (collector, ct) =>
 {
     for (int i = 1; i <= 5; i++)
     {
         await collector.Emit(i, ct);
-        await Delay.For(50, ct);
+        await Delay(50, ct);
     }
 });
 
@@ -671,11 +666,9 @@ var list = await a.Map(x => x * 10).ToList();
 ### 6) SharedFlow and StateFlow (hot streams)
 
 ```csharp
-using CRoutines.Coroutine.Flows;
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
-var shared = new MutableSharedFlow<string>();
+var shared = MutableSharedFlowOf<string>();
 var sub1 = shared.Subscribe(async v => { Console.WriteLine($"S1: {v}"); await Task.CompletedTask; });
 var sub2 = shared.Subscribe(async v => { Console.WriteLine($"S2: {v}"); await Task.CompletedTask; });
 
@@ -684,7 +677,7 @@ sub1.Dispose();
 await shared.Emit("Event 2");
 sub2.Dispose();
 
-var state = new MutableStateFlow<int>(0);
+var state = MutableStateFlowOf<int>(0);
 var sub = state.Subscribe(async v => { Console.WriteLine($"State: {v}"); await Task.CompletedTask; });
 state.Value = 1;
 await state.Update(v => v + 1);
@@ -694,14 +687,14 @@ sub.Dispose();
 ### 7) Utilities: Timeout, Retry, Select
 
 ```csharp
-using CRoutines.Coroutine.Utilities;
 using CRoutines.Coroutine.Extensions;
+using static CRoutines.Prelude;
 
 try
 {
-    var value = await Timeout.WithTimeout(1.Second, async () =>
+    var value = await WithTimeout(1.Second, async () =>
     {
-        await Task.Delay(1500);
+        await Delay(1500);
         return 123;
     });
 }
@@ -710,7 +703,7 @@ catch (TimeoutException)
     Console.WriteLine("Operation timed out");
 }
 
-var result = await Retry.Execute(async () =>
+var result = await Retry(async () =>
 {
     // throw until it succeeds
     return "Success";
@@ -725,26 +718,24 @@ var first = await Select.From(
 ### 8) CoroutineLocal
 
 ```csharp
-using CRoutines.Coroutine.Core;
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
-var userId = new CoroutineLocal<string>();
-await Coroutines.RunBlocking(async scope =>
+var userId = CoroutineLocalOf<string>();
+await RunBlocking(async scope =>
 {
     userId.Value = "User123";
 
     scope.Launch(async ctx =>
     {
         Console.WriteLine($"Job 1 sees: {userId.Value}");
-        await Delay.For(100, ctx.CancellationToken);
+        await Delay(100, ctx.CancellationToken);
     });
 
     scope.Launch(async ctx =>
     {
         userId.Value = "User456";
         Console.WriteLine($"Job 2 sees: {userId.Value}");
-        await Delay.For(100, ctx.CancellationToken);
+        await Delay(100, ctx.CancellationToken);
     });
 
     await scope.JoinAll();
@@ -771,10 +762,9 @@ var winui = new WinUIDispatcher(Microsoft.UI.Dispatching.DispatcherQueue.GetForC
 Switch to UI thread safely:
 
 ```csharp
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
-await Coroutines.RunBlocking(async scope =>
+await RunBlocking(async scope =>
 {
     await scope.WithContext(wpf, async ctx =>
     {
@@ -789,18 +779,18 @@ await Coroutines.RunBlocking(async scope =>
 API client with Retry + Timeout:
 
 ```csharp
-using CRoutines.Coroutine.Utilities;
 using CRoutines.Coroutine.Extensions;
+using static CRoutines.Prelude;
 
 public sealed class ApiClient
 {
     public async Task<string> FetchAsync(string endpoint)
     {
-        return await Retry.Execute(async () =>
+        return await Retry(async () =>
         {
-            return await Timeout.WithTimeout(5.Second, async () =>
+            return await WithTimeout(5.Second, async () =>
             {
-                await Task.Delay(500); // simulate
+                await Delay(500); // simulate
                 return $"Data from {endpoint}";
             });
         }, maxAttempts: 3, delayBetweenAttempts: 500.Millis);
@@ -811,18 +801,16 @@ public sealed class ApiClient
 Background sync using multiple Deferreds and state flow:
 
 ```csharp
-using CRoutines.Coroutine;
-using CRoutines.Coroutine.Flows;
-using CRoutines.Coroutine.Utilities;
+using static CRoutines.Prelude;
 
-var status = new MutableStateFlow<string>("Idle");
-await Coroutines.RunBlocking(async scope =>
+var status = MutableStateFlowOf<string>("Idle");
+await RunBlocking(async scope =>
 {
     status.Subscribe(v => { Console.WriteLine($"Status: {v}"); return Task.CompletedTask; });
 
-    var a = scope.Async(async _ => { await Delay.For(400); return true; });
-    var b = scope.Async(async _ => { await Delay.For(300); return true; });
-    var c = scope.Async(async _ => { await Delay.For(200); return true; });
+    var a = scope.Async(async _ => { await Delay(400); return true; });
+    var b = scope.Async(async _ => { await Delay(300); return true; });
+    var c = scope.Async(async _ => { await Delay(200); return true; });
 
     await a.Await(); await b.Await(); await c.Await();
     status.Value = "Complete";
@@ -832,10 +820,10 @@ await Coroutines.RunBlocking(async scope =>
 Chat room with MutableSharedFlow:
 
 ```csharp
-using CRoutines.Coroutine.Flows;
+using static CRoutines.Prelude
 
 public record ChatMessage(string User, string Text, DateTime Timestamp);
-var messages = new MutableSharedFlow<ChatMessage>();
+var messages = MutableSharedFlowOf<ChatMessage>();
 var sub = messages.Subscribe(async m => { Console.WriteLine($"{m.User}: {m.Text}"); await Task.CompletedTask; });
 await messages.Emit(new ChatMessage("Alice", "Hello!", DateTime.Now));
 sub.Dispose();

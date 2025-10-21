@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using CRoutines.Coroutine.Asyncs;
 using CRoutines.Coroutine.Core;
 
 namespace CRoutines;
@@ -7,6 +6,5 @@ namespace CRoutines;
 public static partial class Prelude
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Deferred<T> DeferredOf<T>(Task<T> task, Job job, Action? start = null) =>
-        new Deferred<T>(task, job, start);
+    public static CoroutineLocal<T> CoroutineLocalOf<T>() => new();
 }
