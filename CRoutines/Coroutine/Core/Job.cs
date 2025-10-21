@@ -11,7 +11,12 @@ public class Job
     private int _isCompleted;
     private int _isCancelled;
     private readonly List<Action> _completionHandlers = new();
+#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     private readonly TaskCompletionSource _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Exception? _exception;
 
