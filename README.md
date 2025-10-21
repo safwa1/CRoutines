@@ -389,7 +389,7 @@ FlowTaskManager.Shared.LoadFromJson(json2);
 
 ## License
 
-MIT (or your chosen license).
+MIT License
 
 
 ---
