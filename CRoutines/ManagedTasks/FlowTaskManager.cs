@@ -5,7 +5,7 @@ namespace CRoutines.ManagedTasks;
 
 public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
 {
-    private static readonly Lazy<FlowTaskManager> Instance = new();
+    private static readonly Lazy<FlowTaskManager> Instance = new(() => new FlowTaskManager());
     public static FlowTaskManager Shared => Instance.Value;
 
     private readonly ConcurrentDictionary<string, FlowTask> _tasks = new();
