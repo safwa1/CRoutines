@@ -6,5 +6,6 @@ public sealed record TaskStateChangedEvent(
     DateTime Timestamp,
     double Progress = 0,
     string? ErrorMessage = null,
+    Exception? Exception = null,
     TimeSpan? Duration = null
 );

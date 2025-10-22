@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using CRoutines.Coroutine.Contexts;
 using CRoutines.Coroutine.Dispatchers;
 
@@ -6,69 +7,143 @@ namespace CRoutines.Coroutine.Core;
 
 public static class CoroutineScopeCache
 {
-    private static readonly ConcurrentBag<CoroutineScope> Cache = [];
+    private static readonly ConcurrentDictionary<ScopeKey, WeakReference<CoroutineScope>> Cache = new();
+    private static readonly Timer CleanupTimer;
+
+    static CoroutineScopeCache()
+    {
+        // Cleanup dead references every 30 seconds
+        CleanupTimer = new Timer(_ => CleanupDeadReferences(), null, 
+            TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private record ScopeKey(Type DispatcherType, int DispatcherHash, Job? ParentJob)
+    {
+        public static ScopeKey Create(ICoroutineDispatcher dispatcher, Job? parentJob)
+        {
+            return new ScopeKey(
+                dispatcher.GetType(),
+                RuntimeHelpers.GetHashCode(dispatcher),
+                parentJob
+            );
+        }
+    }
 
     public static CoroutineScope GetOrCreate(ICoroutineDispatcher dispatcher, Job? parentJob = null)
     {
-        foreach (var scope in Cache)
+        var key = ScopeKey.Create(dispatcher, parentJob);
+
+        while (true)
         {
-            if (!scope.Job.IsCancelled && scope.Job.Parent == parentJob)
+            if (Cache.TryGetValue(key, out var weakRef))
             {
-                Console.WriteLine("From cache");
-                return scope;
+                if (weakRef.TryGetTarget(out var scope))
+                {
+                    // Valid scope found
+                    if (!scope.Job.IsCancelled && !scope.Job.IsCompleted)
+                    {
+                        Console.WriteLine("FROM Caching");
+                        return scope;
+                    }
+                    else
+                    {
+                        // Scope is dead, remove it
+                        Cache.TryRemove(key, out _);
+                    }
+                }
+                else
+                {
+                    // WeakReference is dead, remove it
+                    Cache.TryRemove(key, out _);
+                }
+            }
+            else
+            {
+                // Create new scope
+                var newScope = new CoroutineScope(dispatcher, parentJob);
+                var newWeakRef = new WeakReference<CoroutineScope>(newScope);
+                
+                if (Cache.TryAdd(key, newWeakRef))
+                {
+                    return newScope;
+                }
+                // Else: another thread added it, try again
+            }
+        }
+    }
+
+    public static void Remove(CoroutineScope scope)
+    {
+        var keysToRemove = new List<ScopeKey>();
+        
+        foreach (var kvp in Cache)
+        {
+            if (kvp.Value.TryGetTarget(out var cachedScope) && ReferenceEquals(cachedScope, scope))
+            {
+                keysToRemove.Add(kvp.Key);
             }
         }
 
-        var newScope = new CoroutineScope(dispatcher, parentJob);
-        Cache.Add(newScope);
-        return newScope;
+        foreach (var key in keysToRemove)
+        {
+            if (Cache.TryRemove(key, out _))
+            {
+                scope.Cancel();
+                scope.Dispose();
+            }
+        }
     }
-    
-    public static CoroutineScope Create(ICoroutineDispatcher? dispatcher = null, Job? parentJob = null)
-    {
-        var newScope = new CoroutineScope(dispatcher, parentJob);
-        Cache.Add(newScope);
-        return newScope;
-    }
-    
-    public static void Add(CoroutineScope scope)
-    {
-        Cache.Add(scope);
-    }
-    
-    public static void Remove(CoroutineScope scopeToRemove)
-    {
-        var remaining = Cache.Where(s => s != scopeToRemove).ToList();
 
-        // Empty the bag
-        while (!Cache.IsEmpty)
-            Cache.TryTake(out _);
-
-        // Re-add remaining scopes
-        foreach (var scope in remaining)
-            Cache.Add(scope);
-
-        // Cancel and dispose the removed scope
-        scopeToRemove.Cancel();
-        scopeToRemove.Dispose();
-    }
-    
     public static void ClearAll()
     {
-        // Take a snapshot of valid scopes
-        var validScopes = Cache.Where(s => !s.Job.IsCancelled).ToList();
+        var scopes = new List<CoroutineScope>();
 
-        // Clear the bag
-        while (!Cache.IsEmpty)
-            Cache.TryTake(out _);
-
-        // Cancel and dispose everything we had
-        foreach (var scope in validScopes)
+        // Collect all valid scopes
+        foreach (var kvp in Cache)
         {
-            scope.Cancel();
-            scope.Dispose();
+            if (kvp.Value.TryGetTarget(out var scope))
+            {
+                scopes.Add(scope);
+            }
         }
 
-        validScopes.Clear();
+        // Clear cache
+        Cache.Clear();
+
+        // Cancel and dispose all scopes
+        foreach (var scope in scopes)
+        {
+            try
+            {
+                scope.Cancel();
+                scope.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
     }
+
+    private static void CleanupDeadReferences()
+    {
+        var deadKeys = new List<ScopeKey>();
+
+        foreach (var kvp in Cache)
+        {
+            if (!kvp.Value.TryGetTarget(out var scope) || 
+                scope.Job.IsCancelled || 
+                scope.Job.IsCompleted)
+            {
+                deadKeys.Add(kvp.Key);
+            }
+        }
+
+        foreach (var key in deadKeys)
+        {
+            Cache.TryRemove(key, out _);
+        }
+    }
+
+    public static int Count => Cache.Count;
 }

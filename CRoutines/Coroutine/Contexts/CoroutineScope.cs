@@ -8,17 +8,15 @@ public sealed class CoroutineScope : IDisposable
 {
     private readonly Job _job;
     private readonly ICoroutineDispatcher _dispatcher;
-
+    private bool _disposed;
     public CoroutineScope(ICoroutineDispatcher? dispatcher = null, Job? parentJob = null)
     {
         _dispatcher = dispatcher ?? DefaultDispatcher.Instance;
         _job = parentJob ?? new Job();
-        
-        // Automatically cache this scope
-        CoroutineScopeCache.Add(this);
     }
 
     public Job Job => _job;
+    public ICoroutineDispatcher Dispatcher => _dispatcher;
     public CoroutineContext CoroutineContext => new(_job, _dispatcher);
 
     /// <summary>
@@ -150,13 +148,18 @@ public sealed class CoroutineScope : IDisposable
         CoroutineExceptionHandler.Current?.Handle(ex);
     }
 
-    public void Cancel() => _job.Cancel();
+    public void Cancel()
+    {
+        if (!_disposed)
+            _job.Cancel();
+    }
 
     /// <summary>
     /// Efficiently wait for all child jobs to complete (no polling)
     /// </summary>
     public async Task JoinAll(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         while (true)
         {
             var activeChildren = _job.Children.Where(c => c.IsActive).ToList();
@@ -183,11 +186,24 @@ public sealed class CoroutineScope : IDisposable
         }
     }
 
+    // public async Task JoinAll(CancellationToken cancellationToken = default)
+    // {
+    //     ThrowIfDisposed();
+    //     
+    //     var children = _job.Children.ToList();
+    //     
+    //     if (children.Count == 0)
+    //         return;
+    //
+    //     await Task.WhenAll(children.Select(c => c.Join(cancellationToken)));
+    // }
+
     /// <summary>
     /// Join all with timeout
     /// </summary>
     public async Task<bool> JoinAll(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
 
@@ -201,9 +217,19 @@ public sealed class CoroutineScope : IDisposable
             return false; // Timeout
         }
     }
-
+    
+    
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(CoroutineScope));
+    }
+    
     public void Dispose()
     {
+        if (_disposed) return;
+        
+        _disposed = true;
         Cancel();
     }
 }

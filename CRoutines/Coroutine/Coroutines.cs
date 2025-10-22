@@ -24,5 +24,5 @@ public static class Coroutines
     }
 
     public static CoroutineScope GlobalScope(ICoroutineDispatcher? dispatcher = null)
-        => new(dispatcher);
+        => CoroutineScopeCache.GetOrCreate(dispatcher ?? DefaultDispatcher.Instance);
 }

@@ -9,13 +9,14 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
 
     private readonly ConcurrentDictionary<string, FlowTask> _tasks = new();
     public event Action<TaskStateChangedEvent>? TaskChanged;
+    public event Action<TaskStateTransitionEvent>? TaskTransitioned;
 
     private bool _autoCleanup = true;
 
     private FlowTaskManager()
     {
     }
-    
+
     public IEnumerable<FlowTask> All => _tasks.Values.OrderByDescending(t => t.Priority);
 
     public bool Add(FlowTask task)
@@ -23,17 +24,41 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
         if (!_tasks.TryAdd(task.Name, task))
             return false;
 
+        // subscribe to state changes
         task.Subscribe(this);
+        // subscribe to transitions if available
+        task.StateTransitioned += OnTaskTransitioned;
+
         return true;
+    }
+
+    private void OnTaskTransitioned(TaskStateTransitionEvent evt)
+    {
+        TaskTransitioned?.Invoke(evt);
+        if (evt.NewState is TaskState.Completed or TaskState.Canceled or TaskState.Faulted) CleanupCompleted();
     }
 
     public async Task RunAllAsync()
     {
-        var tasks = All.Select(t => t.StartAsync());
-        await Task.WhenAll(tasks);
+        var tasks = All.Select(t => t.Completion).ToArray();
+        
+        // Start all tasks
+        foreach (var t in All)
+        {
+            _ = Task.Run(t.StartAsync);
+        }
+        
+        // Wait for all to complete
+        try
+        {
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Some tasks may have faulted, but we still want to wait for all
+        }
     }
 
-    // Pause/Resume/Cancel without freezing UI
     public Task PauseAllAsync()
     {
         foreach (var t in _tasks.Values) t.Pause();
@@ -50,6 +75,20 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
     {
         if (_tasks.TryGetValue(name, out var t))
             t.Cancel();
+        return Task.CompletedTask;
+    }
+
+    public Task PauseAsync(string name)
+    {
+        if (_tasks.TryGetValue(name, out var t))
+            t.Pause();
+        return Task.CompletedTask;
+    }
+
+    public Task ResumeAsync(string name)
+    {
+        if (_tasks.TryGetValue(name, out var t))
+            t.Resume();
         return Task.CompletedTask;
     }
 
@@ -79,7 +118,7 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
             .Select(kv => kv.Key).ToList();
         foreach (var name in completed) _tasks.TryRemove(name, out _);
     }
-    
+
     public void OnNext(TaskStateChangedEvent evt)
     {
         TaskChanged?.Invoke(evt);
@@ -88,20 +127,34 @@ public sealed class FlowTaskManager : IObserver<TaskStateChangedEvent>
 
     public void OnError(Exception error)
     {
-        Console.WriteLine($"[TaskManager Error] {error.Message}");
+        TaskChanged?.Invoke(new TaskStateChangedEvent(
+            "FlowTaskManager",
+            TaskState.Faulted,
+            DateTime.Now,
+            0,
+            error.Message,
+            Exception: error
+        ));
     }
 
     public void OnCompleted()
     {
-        Console.WriteLine("TaskManager finished receiving events.");
+        TaskChanged?.Invoke(new TaskStateChangedEvent(
+            "FlowTaskManager",
+            TaskState.Completed,
+            DateTime.Now,
+            100
+        ));
     }
 
-    public void PrintStatus()
+    public static FlowTaskManager AddTask(FlowTask task)
     {
-        Console.WriteLine($"\n--- Tasks ---");
-        foreach (var t in All)
-            Console.WriteLine(
-                $"{t.Name,-20} | {t.State,-10} | {t.Progress,6:0.0}% | {t.Priority,-8} | {(t.Duration?.TotalSeconds ?? 0):0.0}s");
-        Console.WriteLine();
+        Shared.Add(task);
+        return Shared;
+    }
+
+    public static Task RunAllTasksAsync()
+    {
+        return Shared.RunAllAsync();
     }
 }
