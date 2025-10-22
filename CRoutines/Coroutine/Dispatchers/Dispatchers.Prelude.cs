@@ -23,5 +23,17 @@ public static partial class Prelude
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ICoroutineDispatcher Wpf(object dispatcher)
             => new WpfDispatcher(dispatcher);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher WinForms(Func<System.ComponentModel.ISynchronizeInvoke> controlFactory)
+            => new WinFormsDispatcher(controlFactory());
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher WinUI(Func<object> dispatcherQueueFactory)
+            => new WinUIDispatcher(dispatcherQueueFactory());
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ICoroutineDispatcher Wpf(Func<object> dispatcherFactory)
+            => new WpfDispatcher(dispatcherFactory());
     }
 }

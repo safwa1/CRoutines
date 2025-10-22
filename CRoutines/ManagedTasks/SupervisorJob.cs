@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace CRoutines.ManagedTasks;
 
@@ -65,11 +66,11 @@ public sealed class SupervisorJob
         var count = _retries.AddOrUpdate(failed.Name, 1, (_, v) => v + 1);
         if (count > _maxRetries)
         {
-            Console.WriteLine($"❌ Task {failed.Name} exceeded max retries ({_maxRetries})");
+            Debugger.Log(0, "TaskRetry", $"Task {failed.Name} exceeded max retries ({_maxRetries})");
             return false;
         }
 
-        Console.WriteLine($"🔄 Restarting {failed.Name} (attempt {count}/{_maxRetries})");
+        Debugger.Log(0, "TaskRetry", $"Restarting {failed.Name} (attempt {count}/{_maxRetries})");
         await Task.Delay(_retryDelay);
 
         failed.Reset();
@@ -135,4 +136,6 @@ public sealed class SupervisorJob
 
         await _completionSemaphore.WaitAsync();
     }
+    
+    public static DefaultSupervisorJobBuilder Builder => DefaultSupervisorJobBuilder.Create();
 }
