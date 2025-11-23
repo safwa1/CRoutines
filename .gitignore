@@ -1,6 +1,20 @@
-.idea
-CRoutines/obj
-CRoutines/bin
+## Visual Studio
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
 
-/CRoutines.Test/bin/
-/CRoutines.Test/obj/
+# Ignore build outputs
+**/bin/
+**/obj/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+
+## NuGet
+*.nupkg
+packages/
