@@ -315,7 +315,7 @@ await runBlocking(async scope =>
 });
 
 // IO dispatcher
-using var ioScope = CoroutineScopeOf(IODispatcher.Instance);
+using var ioScope = CoroutineScopeOf(Dispatchers.IO);
 var ioJob = ioScope.Launch(async ctx =>
 {
     // Simulate IO
