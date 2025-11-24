@@ -9,7 +9,11 @@ public static class Flow
         Func<IFlowCollector<T>, CancellationToken, Task> block,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var channel = Channel.CreateUnbounded<T>();
+        var channel = Channel.CreateUnbounded<T>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = true
+        });
         var collector = new FlowCollector<T>(channel.Writer);
         
         // Use TaskCompletionSource for better control and avoid unnecessary Task.Run overhead

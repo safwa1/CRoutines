@@ -199,6 +199,12 @@ public sealed class CoroutineScope : IDisposable
         
         if (children.Count == 0)
             return;
+        
+        if (children.Count == 1)
+        {
+            await children[0].Join(cancellationToken);
+            return;
+        }
 
         // Wait for all children to complete - truly event-based, no polling!
         try
