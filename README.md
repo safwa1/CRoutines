@@ -336,7 +336,7 @@ await singleScope.JoinAll();
 // WithContext switch
 await runBlocking(async scope =>
 {
-    var value = await scope.WithContext(IODispatcher.Instance, async ctx =>
+    var value = await scope.WithContext(Dispatchers.IO, async ctx =>
     {
         await Delay(100, ctx.CancellationToken);
         return "from IO";
