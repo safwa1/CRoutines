@@ -8,7 +8,7 @@
 
 </div>
 
-A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
+A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net8.0+). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
 
 - Structured concurrency with Job tree and CoroutineScope
 - Flexible dispatchers (Default, IO, SingleThread, Unconfined, and UI: WPF, WinForms, WinUI3)
@@ -21,7 +21,7 @@ A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0)
 
 ## Installation
 
-Add the project to your solution or reference the compiled assembly targeting net9.0. No external dependencies.
+Add the project to your solution or reference the compiled assembly targeting net8.0+. No external dependencies.
 
 ## Quick start
 
