@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CRoutines.Test/CRoutines.Test.csproj" />
+  <Project Path="CRoutines/CRoutines.csproj" />
+</Solution>
