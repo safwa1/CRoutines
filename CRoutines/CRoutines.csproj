@@ -14,10 +14,10 @@
         <Authors>Safwan Abdulghani</Authors>
         <Company>Safwan.pro</Company>
         <Description>
-            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
+            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net8.0+). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
         </Description>
         <PackageDescription>
-            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net9.0). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
+            A lightweight, pragmatic coroutines and reactive flows toolkit for .NET (net8.0+). Inspired by Kotlin Coroutines, adapted to feel natural in C# async/await world.
         </PackageDescription>
         <PackageTags>async;coroutines;concurrency;structured-concurrency;C#-DSL</PackageTags>
         <PackageProjectUrl>https://github.com/safwa1/CRoutines</PackageProjectUrl>

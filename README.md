@@ -29,7 +29,7 @@ Add the project to your solution or reference the compiled assembly targeting ne
 using CRoutines.Coroutine.Extensions;
 using static CRoutines.Prelude;
 
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     // Fire-and-forget
     var job = scope.Launch(async ctx =>
@@ -101,7 +101,7 @@ CoroutineContext gives you:
 Example: switch context to a UI thread and back
 
 ```csharp
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var ui = new WpfDispatcher(System.Windows.Application.Current.Dispatcher);
 
@@ -224,8 +224,8 @@ When to use:
 
 Key types:
 - FlowTask — a single managed unit of work
-  - Properties: Name, Priority, State, Progress, CreatedAt, Duration
-  - States (TaskState): Created, Scheduled, Running, Paused, Completed, Canceled, Faulted
+    - Properties: Name, Priority, State, Progress, CreatedAt, Duration
+    - States (TaskState): Created, Scheduled, Running, Paused, Completed, Canceled, Faulted
 - FlowTaskManager.Shared — the singleton task registry/runner
 - TaskPriority — Low, Normal, High, Critical (manager orders by priority)
 - TaskSnapshot, TaskStateChangedEvent — persistence and telemetry
@@ -380,9 +380,9 @@ FlowTaskManager.Shared.LoadFromJson(json2);
 ## Error handling philosophy
 
 - Exceptions inside coroutines are captured by the corresponding Job, then:
-  - Marked faulted (Job.IsFaulted, Job.Exception)
-  - Propagated up the Job tree by default (unless using SupervisorJob)
-  - Routed to CoroutineExceptionHandler.Current if set
+    - Marked faulted (Job.IsFaulted, Job.Exception)
+    - Propagated up the Job tree by default (unless using SupervisorJob)
+    - Routed to CoroutineExceptionHandler.Current if set
 
 ## Threading notes
 
@@ -393,7 +393,7 @@ FlowTaskManager.Shared.LoadFromJson(json2);
 ## FAQ
 
 - Is this a replacement for Task/async-await? No, it complements them with structured concurrency and higher-level primitives.
-- Do I need to dispose CoroutineScope? Scopes cancel on Dispose(). Prefer using statements or RunBlocking.
+- Do I need to dispose CoroutineScope? Scopes cancel on Dispose(). Prefer using statements or runBlocking.
 - Can I combine with regular Task APIs? Yes. Under the hood, everything is Task-based.
 
 ## License
@@ -419,7 +419,7 @@ using CRoutines.Coroutine.Contexts;
 using CRoutines.Coroutine.Extensions;
 using static CRoutines.Prelude;
 
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     Console.WriteLine("Starting coroutines...");
 
@@ -465,7 +465,7 @@ using CRoutines.Coroutine.Dispatchers;
 using static CRoutines.Prelude;
 
 // Default (ThreadPool)
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     scope.Launch(async ctx =>
     {
@@ -494,7 +494,7 @@ singleScope.Launch(async ctx =>
 await singleScope.JoinAll();
 
 // WithContext switch
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var value = await scope.WithContext(IODispatcher.Instance, async ctx =>
     {
@@ -511,7 +511,7 @@ await RunBlocking(async scope =>
 using CRoutines.Coroutine.Extensions;
 using static CRoutines.Prelude;
 
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var job = scope.Launch(async ctx =>
     {
@@ -530,7 +530,7 @@ await RunBlocking(async scope =>
 });
 
 // Join with timeout
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var longJob = scope.Launch(async ctx =>
     {
@@ -542,7 +542,7 @@ await RunBlocking(async scope =>
 });
 
 // Join with CancellationToken
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var job = scope.Launch(async ctx => await Delay(3000, ctx.CancellationToken));
     using var cts = new CancellationTokenSource();
@@ -553,7 +553,7 @@ await RunBlocking(async scope =>
 });
 
 // Efficient JoinAll and timeout
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     for (int i = 0; i < 5; i++)
         scope.Launch(async ctx => await Delay(200 + i * 150, ctx.CancellationToken));
@@ -573,7 +573,7 @@ using static CRoutines.Prelude;
 CoroutineExceptionHandler.Current = new CoroutineExceptionHandler(ex =>
     Console.WriteLine($"[Global] {ex.Message}"));
 
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var supervisor = new SupervisorJob();
     var childScope = CoroutineScopeOf(parentJob: supervisor);
@@ -596,7 +596,7 @@ await RunBlocking(async scope =>
 });
 
 // Non-cascading async: one Deferred fails, another still succeeds
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     var d1 = scope.Async<string>(async ctx =>
     {
@@ -622,7 +622,7 @@ await RunBlocking(async scope =>
 using static CRoutines.Prelude;
 
 var channel = BoundedCoroutineChannelOf<int>(2);
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     // Producer
     scope.Launch(async ctx =>
@@ -729,7 +729,7 @@ var first = await Select.From(
 using static CRoutines.Prelude;
 
 var userId = CoroutineLocalOf<string>();
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     userId.Value = "User123";
 
@@ -772,7 +772,7 @@ Switch to UI thread safely:
 ```csharp
 using static CRoutines.Prelude;
 
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     await scope.WithContext(wpf, async ctx =>
     {
@@ -812,7 +812,7 @@ Background sync using multiple Deferreds and state flow:
 using static CRoutines.Prelude;
 
 var status = MutableStateFlowOf<string>("Idle");
-await RunBlocking(async scope =>
+await runBlocking(async scope =>
 {
     status.Subscribe(v => { Console.WriteLine($"Status: {v}"); return Task.CompletedTask; });
 
